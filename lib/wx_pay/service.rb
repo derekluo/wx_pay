@@ -167,6 +167,8 @@ module WxPay
       def invoke_remote(url, payload, options = {})
         options = WxPay.extra_rest_client_options.merge(options)
 
+        puts "payload: #{payload}, options: #{options}" if ENV['DEBUG']
+
         r = RestClient::Request.execute(
           {
             method: :post,
