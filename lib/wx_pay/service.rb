@@ -1,3 +1,4 @@
+# coding: utf-8
 require 'rest_client'
 require 'active_support/core_ext/hash/conversions'
 
@@ -96,6 +97,26 @@ module WxPay
       yield r if block_given?
 
       r
+    end
+
+    GENERATE_BIZPAYURL_REQUIRED_FIELDS = %i(product_id)
+    def self.generate_bizpayurl(params, options = {})
+      params = {
+        appid: options.delete(:appid) || WxPay.appid,
+        mch_id: options.delete(:mch_id) || WxPay.mch_id,
+        nonce_str: SecureRandom.uuid.tr('-', '')
+      }.merge(params)
+
+      check_required_options(params, GENERATE_BIZPAYURL_REQUIRED_FIELDS)
+
+      params[:time_stamp] = Time.now.to_i
+      params[:sign] = WxPay::Sign.generate(params)
+
+      str = params.map do |key, value|
+        "#{key}=#{value}" if value != "" && !value.nil?
+      end.compact.join('&')
+
+      "weixin://wxpay/bizpayurl?#{str}"
     end
 
     GENERATE_APP_PAY_REQ_REQUIRED_FIELDS = %i(prepayid noncestr)
