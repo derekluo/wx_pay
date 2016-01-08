@@ -22,23 +22,41 @@ module WxPay
       r
     end
 
-    GENERATE_APP_PAY_REQ_REQUIRED_FIELDS = %i(prepayid noncestr)
-    def self.generate_app_pay_req(params, options = {})
+    INVOKE_ORDERQUERY_REQUIRED_FIELDS = %i() # transaction_id or out_trade_no
+    def self.invoke_orderquery(params, options = {})
       params = {
         appid: options.delete(:appid) || WxPay.appid,
-        partnerid: options.delete(:mch_id) || WxPay.mch_id,
-        package: 'Sign=WXPay',
-        timestamp: Time.now.to_i.to_s
+        mch_id: options.delete(:mch_id) || WxPay.mch_id,
+        nonce_str: SecureRandom.uuid.tr('-', '')
       }.merge(params)
 
-      check_required_options(params, GENERATE_APP_PAY_REQ_REQUIRED_FIELDS)
+      check_required_options(params, INVOKE_ORDERQUERY_REQUIRED_FIELDS)
 
-      params[:sign] = WxPay::Sign.generate(params)
+      r = invoke_remote("#{GATEWAY_URL}/pay/orderquery", make_payload(params), options)
 
-      params
+      yield r if block_given?
+
+      r
     end
 
-    INVOKE_REFUND_REQUIRED_FIELDS = %i(out_refund_no total_fee refund_fee op_user_id)
+    INVOKE_CLOSEORDER_REQUIRED_FIELDS = %i(out_trade_no)
+    def self.invoke_closeorder(params, options = {})
+      params = {
+        appid: options.delete(:appid) || WxPay.appid,
+        mch_id: options.delete(:mch_id) || WxPay.mch_id,
+        nonce_str: SecureRandom.uuid.tr('-', '')
+      }.merge(params)
+
+      check_required_options(params, INVOKE_CLOSEORDER_REQUIRED_FIELDS)
+
+      r = invoke_remote("#{GATEWAY_URL}/pay/closeorder", make_payload(params), options)
+
+      yield r if block_given?
+
+      r
+    end
+
+    INVOKE_REFUND_REQUIRED_FIELDS = %i(out_refund_no total_fee refund_fee op_user_id) # transaction_id or out_trade_no
     def self.invoke_refund(params, options = {})
       params = {
         appid: options.delete(:appid) || WxPay.appid,
@@ -61,6 +79,39 @@ module WxPay
       yield r if block_given?
 
       r
+    end
+
+    INVOKE_REFUNDQUERY_REQUIRED_FIELDS = %i() # transaction_id, out_trade_no, out_refund_no or refund_id
+    def self.invoke_refundquery(params, options = {})
+      params = {
+        appid: options.delete(:appid) || WxPay.appid,
+        mch_id: options.delete(:mch_id) || WxPay.mch_id,
+        nonce_str: SecureRandom.uuid.tr('-', '')
+      }.merge(params)
+
+      check_required_options(params, INVOKE_REFUNDQUERY_REQUIRED_FIELDS)
+
+      r = invoke_remote("#{GATEWAY_URL}/pay/refundquery", make_payload(params), options)
+
+      yield r if block_given?
+
+      r
+    end
+
+    GENERATE_APP_PAY_REQ_REQUIRED_FIELDS = %i(prepayid noncestr)
+    def self.generate_app_pay_req(params, options = {})
+      params = {
+        appid: options.delete(:appid) || WxPay.appid,
+        partnerid: options.delete(:mch_id) || WxPay.mch_id,
+        package: 'Sign=WXPay',
+        timestamp: Time.now.to_i.to_s
+      }.merge(params)
+
+      check_required_options(params, GENERATE_APP_PAY_REQ_REQUIRED_FIELDS)
+
+      params[:sign] = WxPay::Sign.generate(params)
+
+      params
     end
 
     INVOKE_TRANSFER_REQUIRED_FIELDS = %i(partner_trade_no openid check_name amount desc spbill_create_ip)
